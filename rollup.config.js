@@ -6,6 +6,7 @@ import commonjs from '@rollup/plugin-commonjs'
 import { string } from 'rollup-plugin-string'
 import scss from 'rollup-plugin-scss'
 import node from '@rollup/plugin-node-resolve'
+import nodePolyfills from 'rollup-plugin-node-polyfills'
 
 if (!process.env.TARGET) {
     throw new Error('TARGET package must be specified via --environment flag.')
@@ -33,14 +34,13 @@ const outputConfigs = {
         format: `cjs`
     },
     global: {
-        name,
         file: resolve(`dist/${name}.global.js`),
         format: `iife`
     }
 }
 
 const defaultFormats = ['esm', 'cjs']
-const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
+const inlineFormats = process.env.FORMATS && process.env.FORMATS.split('|')
 const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
     ? []
@@ -78,8 +78,13 @@ function createConfig(format, output, plugins = []) {
 
     if (isGlobalBuild) {
         output.name = packageOptions.name || name
+        if (name !== 'timecat') {
+            output.name = 'window'
+            output.extend = true
+        }
     }
     output.globals = {}
+    output.sourcemap = true
 
     const shouldEmitDeclarations = process.env.TYPES != null && !hasTSChecked
 
@@ -116,6 +121,7 @@ function createConfig(format, output, plugins = []) {
             browser: true,
             mainFields: ['module', 'main']
         }),
+        nodePolyfills(),
         json(),
         string({
             include: ['**/*.html', '**/*.css'],

@@ -26,13 +26,13 @@ import { waitStart, removeStartPage, showStartMask } from './dom'
 
 const defaultReplayOptions = { autoplay: true, mode: 'default' } as ReplayOptions
 
-export default class Player {
+export class Player {
     fmp: FMP
-    constructor(options: ReplayOptions) {
+    constructor(options?: ReplayOptions) {
         this.init(options)
     }
 
-    async init(options: ReplayOptions) {
+    async init(options?: ReplayOptions) {
         const opts = { ...defaultReplayOptions, ...options }
 
         window.G_REPLAY_OPTIONS = opts
@@ -134,10 +134,6 @@ export default class Player {
         window.dispatchEvent(event)
     }
 
-    async fetchData(input: RequestInfo, init?: RequestInit): Promise<ReplayPack[]> {
-        return fetch(input, init).then(res => res.json())
-    }
-
     async dataReceiver(receiver: (sender: (data: RecordData) => void) => void): Promise<ReplayPack[]> {
         let replayPack: ReplayPack
         let head: ReplayHead
@@ -194,11 +190,11 @@ export default class Player {
     }
 
     async getReplayData(options: ReplayOptions) {
-        const { receiver, replayPacks: data, fetch } = options
+        const { receiver, packs, records } = options
 
         const rawReplayPacks =
-            data ||
-            (fetch && (await this.fetchData(fetch.url, fetch.options))) ||
+            (records && classifyRecords(records)) ||
+            packs ||
             (receiver && (await this.dataReceiver(receiver))) ||
             this.getGZipData() ||
             (await this.getDataFromDB()) ||

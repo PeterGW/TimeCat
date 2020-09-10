@@ -4,7 +4,7 @@ import { debounce, throttle, isDev, logger, getRadix64TimeStr, nodeStore } from 
 export abstract class Watcher<T extends RecordData> {
     relatedId: string
     context: Window
-    emit: RecordEvent<T>
+    emit: RecordEvent<RecordData>
     options: WatcherOptions<T>
 
     constructor(options: WatcherOptions<T>) {
@@ -24,13 +24,13 @@ export abstract class Watcher<T extends RecordData> {
         this.options.reverseStore.add(fn)
     }
 
-    emitData(type: RecordType, record: RecordData['data'], callback?: (data: BaseRecord<RecordType>) => T) {
+    emitData(type: RecordType, record: RecordData['data'], callback?: (data: RecordData) => T) {
         const data = {
             type,
             data: record,
             relatedId: this.relatedId,
             time: getRadix64TimeStr()
-        } as BaseRecord<RecordType>
+        } as RecordData
 
         if (isDev) {
             logger(data)
