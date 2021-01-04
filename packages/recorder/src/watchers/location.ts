@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import { WatcherOptions, LocationRecord, RecordType } from '@timecat/share'
 import { Watcher } from '../watcher'
 
@@ -40,14 +49,19 @@ export class LocationWatcher extends Watcher<LocationRecord> {
     locationHandle = (e: Event) => {
         const contextNodeId = this.getContextNodeId(e)
         const [, , path] = e.arguments || [, , this.context?.location?.pathname]
+        const [base] = this.context.document.body.getElementsByTagName('base')
         const { href, hash } = this.context.location
+        const title = document.title
         this.emitData(RecordType.LOCATION, {
             contextNodeId,
-            href,
+            href: base?.href || href,
             hash,
-            path
+            path,
+            title
         })
     }
+
+    emitOne = () => this.locationHandle(({ target: window } as unknown) as Event)
 
     getContextNodeId(e: Event) {
         return this.getNodeId((e.target as Window).document.documentElement)!

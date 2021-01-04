@@ -1,94 +1,145 @@
-### Quick Start
+## Quick Start
 
 > TimeCat is going rapid iteration, The API may change frequently, Please pay attention to documentation updates, If you have any questions, please contact the author
 
-###### Import SDK
+#### Import TimeCat
 ```ts
 // from module
 import { Recorder, Player } from 'timecatjs';
  // or
-import Recorder from '@timecat/recorder'
-import Player from '@timecat/player'
+import { Recorder } from '@timecat/recorder'
+import { Player } from '@timecat/player'
 
 // from cdn
 const { Recorder, Player } = window.TimeCat
 ```
 
-###### Record Data
+#### Record
+
+```ts
+const recorder = new Recorder()
+```
+#### Play
+
+```ts
+const player = new Player()
+```
+
+## Advanced
+
+#### Record Options
 ```ts
 // record page
 interface RecordOptions {
-    mode?: 'live' | 'default' // mode
-    write?: boolean // write data to indexedDB, default is true
-    audio?: boolean // if your want record audio
+    write: boolean // write data to indexedDB, default is true
+    keep: boolean // keep data in DB otherwise auto-clear, default is true
+    audio: boolean // if your want record audio, default is false
+    font: boolean // record font, default is false
+    plugins: RecorderPlugin[] // extend plugins here
+    visibleChange: boolean // stop or resume recorder when visibleChange
+    rewriteResource: RewriteResource
+}
+
+// make 'http://a.com/path' => 'http://b.com/path' for keep resource
+interface RewriteResource {
+    matches: string[] // example: ['css', 'woff']
+    replaceOrigin: string  // example: 'https://xxx.com'
+    folderPath?: string // /path/xxx
+    fn?: (pre: string, next: string) => void
 }
 
 // default use IndexedDB to save records
-const recorder = new Recorder(RecordOptions)
-
-// if you wanna send the records to server
-const recorder = new recorder()
+const recorder = new Recorder(Partial<RecordOptions>)
 
 // receive data here
 recorder.onData((data: RecordData) => void)
 
-// The onData API called very frequently
-// You can push the data to a Array
-// Collect the amount of data and upload it
+// stop record
+recorder.destroy()
 
-// simple upload like this
-const records = []
-recorder.onData((data) => {
-    records.push(data)
-})
+// clear all records in db
+recorder.clearDB()
 
-// upload after collected
-fetch(<Server URL>, {
-        body: JSON.stringify(records),
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
+// write a plugin 
+class ExamplePlugin {
+    constructor(options) { /** init plugin options */ }
 
-// if you want stop record
-recorder.unsubscribe()
+    apply(recorder) {
+        const { plugin, db } = recorder
+
+        type HooksType = 'beforeRun' | 'run' | 'emit' | 'end'
+        plugin(HooksType, () => void)
+        plugin('emit', record => {
+            // get record
+            console.log(record)
+            // you can modify record here
+            record['some property'] = doSomething
+        })
+
+        // read or write to indexedDB
+        const records = await db.readRecords()
+        db.deleteRecords(range: { lowerBound: <recordID>, upperBound: <recordID> })
+        db.clear()
+        db.doSomething()...
+    }
+}
+
+new Recorder({ plugins: [new ExamplePlugin(options...)] })
+
 ```
-- [Record Example](https://github.com/oct16/TimeCat/blob/073c467afc644ce37e4f51937c28eb5000b2a92c/examples/todo.html#L258) 
+- [Record Example](https://github.com/oct16/TimeCat/blob/master/examples/todo.html#L257-L275) 
 
-###### Replay
+#### Replay
 
 ```ts
 // replay record
 interface ReplayOptions {
-    mode?: 'live' | 'default' // mode
-    records: ReplayData[]
-    packs?: ReplayPack[] // data from options
-    // receive data in live mode
-    receiver?: ((data: RecordData) => void) => void
-    proxy?: string // if cross domain
-    autoplay?: boolean // autoplay when data loaded
+    target: string | HTMLElement // which element has contained the Player, default is Body
+    records: RecordData[] // play with records data
+    // receive data in live mode, see examples/mirror
+    receiver: ((data: RecordData) => void) => void
+    autoplay: boolean // autoplay when data loaded
+    heatPoints: boolean // show heatPoints in progress bar, default is false
+    timeMod: 'recordingTime' | 'durationTime' // default is durationTime
+    fastForward: number[] // present the fast-forward speeds in progress bar, default is [4,16]
 }
 
-new Player(ReplayOptions)
+const player = new Player(Partial<ReplayOptions>)
+
+type EventTypes = 'play' | 'stop' | 'pause' | 'speed' | 'resize'
+
+player.on(eventType: EventTypes, (...args) => {
+    // receive event here
+})
+
+player.destroy() // destroy player
+
 ```
-- [Replay example](https://github.com/oct16/TimeCat/blob/4c91fe2e9dc3786921cd23288e26b421f6ea0848/examples/player.html#L14)
+- [Replay example](https://github.com/oct16/TimeCat/blob/master/examples/replay.html#L1-L29)
 
 
-###### Export
+#### Export
 ```ts
 
 import { exportReplay } from 'timecatjs'
 
 // export html file
 interface ExportOptions {
-    scripts?: ScriptItem[] // inject script in html
-    autoplay?: boolean // autoplay when data loaded
-    audioExternal?: boolean // export audio as a file, default is inline
-    dataExternal?: boolean // export data json as a file, default is inline
+    scripts: ScriptItem[] // inject script in html
+    autoplay: boolean // autoplay when data loaded
+    audioExternal: boolean // export audio as a file, default is inline
+    dataExternal: boolean // export data json as a file, default is inline
 }
 
-exportReplay(ExportOptions)
+exportReplay(Partial<ExportOptions>)
 ```
+- [Export Example](https://github.com/oct16/TimeCat/blob/5172352a6494c1182e83452605677796e0fe0f46/packages/player/src/keyboard.ts#L96-L154)
 
+
+## Articles
+ - [TimeCat 入门：我们的第一个应用](record-and-replay.md)
+ - [TimeCat 进阶：把数据上传到服务器](upload-to-server.md)
+ - TimeCat 高级 // TODO
+
+---
 ##### [🏠Homepage](../README.md) 

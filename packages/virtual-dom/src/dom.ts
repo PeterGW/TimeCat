@@ -1,6 +1,15 @@
-import { completeAttrHref, completeCssHref, proxyResource } from '@timecat/utils'
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
 
-export function setAttribute(node: HTMLElement, name: string, value: string | boolean | null): void {
+import { completeAttrHref, completeCssHref } from '@timecat/utils'
+
+export function setAttribute(node: HTMLElement, name: string, value: string | boolean | null | object): void {
     if (node.nodeType !== Node.ELEMENT_NODE) {
         return
     }
@@ -46,14 +55,14 @@ export function setAttribute(node: HTMLElement, name: string, value: string | bo
         if (value.startsWith('data:')) {
             // skip
         } else {
-            value = proxyResource(completeAttrHref(String(value), node))
+            value = completeAttrHref(String(value), node)
         }
     }
 
     // The srcset attribute specifies the URL of the image to use in different situations
     if (name === 'srcset') {
         const srcArray = value.split(',')
-        value = srcArray.map(src => proxyResource(completeAttrHref(src.trim(), node))).toString()
+        value = srcArray.map(src => completeAttrHref(src.trim(), node)).toString()
     }
 
     if (value.startsWith('/')) {

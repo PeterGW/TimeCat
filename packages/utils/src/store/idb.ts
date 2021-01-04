@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import { TransactionMode, RecordData, DBRecordData } from '@timecat/share'
 
 export class IndexedDBOperator {
@@ -111,6 +120,24 @@ export class IndexedDBOperator {
             store.count().onsuccess = event => {
                 const count = event!.target!.result
                 resolve(count)
+            }
+        })
+    }
+
+    async last(): Promise<RecordData> {
+        const store = await this.getStore()
+
+        return new Promise((resolve, reject) => {
+            const openCursorRequest = store.openKeyCursor(null, 'prev')
+            openCursorRequest.onsuccess = () => {
+                const cursor = openCursorRequest.result
+                if (!cursor) {
+                    return reject()
+                }
+                const request = store.get(cursor.key)
+                request.onsuccess = () => {
+                    resolve(request.result)
+                }
             }
         })
     }

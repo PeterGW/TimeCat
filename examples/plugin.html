@@ -63,7 +63,7 @@
 
     <input type="text" value="123">
 
-    <script id="timecat" src="./timecat.global.js"></script>
+    <script id="timecat" src="//cdn.jsdelivr.net/npm/timecatjs"></script>
     <script>
 
         class RunPlugin {
@@ -102,7 +102,7 @@
                 if (replayButton.className) {
                     return
                 }
-                recorder.unsubscribe()
+                recorder.destroy()
                 window.open('replay.html')
             })
         }

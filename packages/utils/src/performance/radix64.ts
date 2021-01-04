@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 const ENCODE_TYPE = {
     BASE: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',
     BASE_URL: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
@@ -33,12 +42,12 @@ class Radix64 {
     }
 
     private decode(str: string, type: keyof typeof ENCODE_TYPE): number {
-        const data = ENCODE_TYPE[type].indexOf(str)
+        const data = ENCODE_TYPE[type].indexOf(str) + 1
         return data
     }
 
     private encode(num: number, type: keyof typeof ENCODE_TYPE) {
-        const n = num & (ENCODE_TYPE.BASE.length - 1)
+        const n = (num - 1) & (ENCODE_TYPE.BASE.length - 1)
         return ENCODE_TYPE[type][n]
     }
 }

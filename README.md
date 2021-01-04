@@ -1,30 +1,22 @@
 <p align="center">
 <h1 align="center">TimeCat</h1>
 <h6 align="center">
-A Magical Web Recorder 🖥 网页录屏器
+A Magical Web Recorder And Player
 </h6>
 <h6 align="center">
 
 [![GitHub issues](https://img.shields.io/github/issues-raw/oct16/TimeCat)](https://github.com/oct16/TimeCat/issues) ![GitHub last commit](https://img.shields.io/github/last-commit/oct16/timecat) [![npm (tag)](https://img.shields.io/npm/v/timecatjs/latest)](https://www.npmjs.com/package/timecatjs)
 
-<h6>
+<img src="./timecat.gif">
+</h6>
 
 ## Description
 
 English | [中文](./README.cn.md)
 
-TimeCat is a Web Record tool, passing a unique way and algorithm to provide ultra-high performance and ultra-high compression webpage lossless video record and replay
+TimeCat is a open source web Page recording tool that generates files are not real video, but can be played like real video, completely restoring the user's actions in the browser.
 
 [🖥 DEMO](https://oct16.github.io/TimeCat) Chrome Browser
-
-## Milestone
-    08.20 Prerelease V1.2.0-alpha
-    07.20 Support Iframe (V1.1.0)
-    06.07 Support Audio
-    05.24 Released V1.0.0
-    04.26 Live Mode    
-    03.31 Chrome Plugin Released
-    02.12 Departure
 
 ## Version 
 
@@ -38,8 +30,7 @@ TimeCat is a Web Record tool, passing a unique way and algorithm to provide ultr
 ## Chrome Plugin
 
 Provides Chrome plugin and supports one-click record and export
-
-| <img src="./assets/logo.png" width="30">| [TimeCat-Chrome](https://chrome.google.com/webstore/detail/timecat-chrome/jgnkkambbdmhfdbdbkljlenddlbplhal?hl=en&authuser=0) |
+| <img width=34 align=top src="https://www.google.com/chrome/static/images/chrome-logo.svg" />| [TimeCat-Chrome](https://chrome.google.com/webstore/detail/timecat-chrome/jgnkkambbdmhfdbdbkljlenddlbplhal) |
 |--|--|
 
 ## Installation
@@ -51,28 +42,22 @@ $ npm i timecatjs -D
 
 #### Import in Browser
 
-Add script tags in your browser and use the global variable ``TimeCat``
+Add script tags in your browser and use the global variable ``TimeCat``, you can choose the follow CDN:
 
-- **jsDelivr**
-  - https://cdn.jsdelivr.net/npm/timecatjs
-  - https://cdn.jsdelivr.net/npm/@timecat/recorder
-  - https://cdn.jsdelivr.net/npm/@timecat/player
-- **UNPKG**
-  - https://unpkg.com/timecatjs
-  - https://unpkg.com/@timecat/recorder
-  - https://unpkg.com/@timecat/player
+- <a href="https://www.jsdelivr.com/package/npm/timecatjs"><img align="top" width="100" src="./articles/images/jsdelivr.png"></a>
+- <a href="https://unpkg.com/timecatjs"><img align="top" width="100" src="./articles/images/unpkg.png"></a>
 
 ## Usage
  - [Quick Start](articles/quick-start.md)
+ - [A Real Demo](https://github.com/oct16/timecat-demo)
 
-## Technology
- - [How are TimeCat works](articles/technology.md)
+## Articles
+ - [How it works](articles/technology.md)
 
 ## Contributing
 
-Feel free to dive in! [Open an issue](https://github.com/oct16/TimeCat/issues/new) or submit PRs.
-
-Standard Readme follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct/) Code of Conduct.
+Feel free to dive in! [Open an issue](https://github.com/oct16/TimeCat/issues/new/choose) or submit [PRs](https://github.com/oct16/TimeCat/pulls)   
+Standard Readme follows the [Contributor Covenant](https://www.contributor-covenant.org/version/2/0/code_of_conduct/) Code of Conduct
 
 ## Contributors
 

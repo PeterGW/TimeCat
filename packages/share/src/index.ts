@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 export type ValueOf<T> = T[keyof T]
 export type ValueOfKey<T, K extends keyof T> = T[K]
 export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never
@@ -15,11 +24,14 @@ export interface InfoData {
 export type SnapshotRecord = BaseRecord<RecordType.SNAPSHOT, { vNode: VNode } & InfoData>
 
 type Extra = {
-    props?: {
-        [key: string]: string | number | boolean | Object | undefined
+    props: {
+        textContent: string
+        value: string
+        checked: boolean
+        selected: boolean
         scroll?: { top: number; left: number }
     }
-    isSVG?: boolean
+    isSVG: boolean
 }
 
 type Children = (VNode | VSNode)[]
@@ -52,7 +64,8 @@ export enum RecordType {
     'LOCATION',
     'AUDIO',
     'CANVAS',
-    'TERMINATE'
+    'TERMINATE',
+    'FONT'
 }
 
 export enum FormElementEvent {
@@ -107,10 +120,10 @@ export interface CharacterDataUpdateData {
     id: number
 }
 
-export interface UpdateNodeData {
+export interface UpdateNodeData<T = VSNode | VNode | number> {
     parentId: number
     nextId: number | null
-    node: VSNode | VNode | number
+    node: T
 }
 
 export interface movedNodesData {
@@ -152,7 +165,7 @@ interface FormElementStrPatches {
 export type AudioRecord = BaseRecord<RecordType.AUDIO, AudioStrList | AudioOptions>
 export interface AudioOptions {
     type: 'opts'
-    data: RecorderOptions
+    data: AudioOptionsData
 }
 export interface AudioStrList {
     type: 'base64'
@@ -165,11 +178,12 @@ export interface LocationRecordData {
     href: string
     path: string
     hash: string
+    title: string
     contextNodeId: number
 }
 export type CanvasRecord = BaseRecord<RecordType.CANVAS, CanvasRecordData>
 
-export type CanvasRecordData = CanvasMutationRecordData | CanvasInitRecordData
+export type CanvasRecordData = CanvasMutationRecordData | CanvasInitSnapshotData | CanvasInitStatusData
 
 export interface CanvasMutationRecordData {
     id: number
@@ -178,9 +192,15 @@ export interface CanvasMutationRecordData {
         args: any[]
     }[]
 }
-export interface CanvasInitRecordData {
+
+export interface CanvasInitSnapshotData {
     id: number
     src: string
+}
+
+export interface CanvasInitStatusData {
+    id: number
+    status: { [key: string]: string | number }
 }
 
 export type RecordEvent<T extends RecordData> = (e: T) => void
@@ -199,10 +219,11 @@ export type RecordData =
     | LocationRecord
     | CanvasRecord
     | TerminateRecord
+    | FontRecord
 
 export interface AudioData {
     src: string
-    opts: RecorderOptions
+    opts: AudioOptionsData
     bufferStrList: string[]
     subtitles: SubtitlesData[]
 }
@@ -213,20 +234,7 @@ interface SubtitlesData {
     text: string
 }
 
-export interface RecordInternalOptions extends RecordOptions {
-    context: Window
-    skip?: boolean
-}
-
-export interface RecordOptions {
-    mode?: 'live' | 'default'
-    audio?: boolean
-    write?: boolean
-    uploadUrl?: string
-    plugins?: any[]
-}
-
-export interface RecorderOptions {
+export interface AudioOptionsData {
     sampleBits: 8 | 16
     sampleRate: 8000 | 16000 | 22050 | 24000 | 44100 | 48000
     channelCount: 1 | 2
@@ -240,11 +248,13 @@ export enum TransactionMode {
     'VERSIONCHANGE' = 'versionchange'
 }
 
-export type WatcherOptions<T extends RecordData | HeadRecord> = {
+export type WatcherOptions<T extends RecordData | HeadRecord, WatchersInstance = any, Recorder = any> = {
+    recorder: Recorder
     context: Window
     listenStore: Set<Function>
     emit: RecordEvent<T>
     relatedId: string
+    watchers: WatchersInstance
 }
 
 export interface Constructable<T> {
@@ -254,24 +264,26 @@ export interface Constructable<T> {
 export interface ReplayOptions {
     mode?: 'live' | 'default'
     receiver?: (sender: (data: RecordData) => void) => void
-    proxy?: string
     autoplay?: boolean
-    packs?: ReplayPack[]
     records?: RecordData[]
     target?: string | HTMLElement | Window
+    heatPoints?: boolean
+    timeMode?: 'recordingTime' | 'durationTime'
+    fastForward?: number[]
 }
 
 export interface ReplayInternalOptions extends ReplayOptions {
     destroyStore: Set<Function>
-}
-
-export interface ReplayPack {
-    head: ReplayHead
-    body: ReplayData[]
+    fastForward: number[]
+    autoplay: boolean
+    mode: 'live' | 'default'
+    target: string | HTMLElement | Window
+    timeMode: 'recordingTime' | 'durationTime'
 }
 
 export interface ReplayData {
     index?: number
+    head?: HeadRecord
     snapshot: SnapshotRecord
     records: RecordData[]
     audio: AudioData
@@ -280,11 +292,12 @@ export interface ReplayData {
 export interface ReplayHead {
     version: string
     href: string
+    title: string
     relatedId: string
     userAgent: string
     platform: string
-    beginTime: string
-    endTime?: string
+    beginTime: number
+    endTime?: number
     extra?: {
         [key: string]: string
     }
@@ -295,6 +308,13 @@ export type HeadRecord = BaseRecord<RecordType.HEAD, ReplayHead>
 export interface BaseRecord<T, D = any> {
     type: T
     data: D
-    time: string
+    time: number
     relatedId: string
 }
+
+export interface FontRecordData {
+    family: string
+    source: string
+}
+
+export type FontRecord = BaseRecord<RecordType.FONT, FontRecordData>

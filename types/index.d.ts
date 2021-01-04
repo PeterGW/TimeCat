@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 declare module '*.html' {
     const value: string
     export default value
@@ -9,56 +18,4 @@ declare module '*.css' {
 declare module '*.scss' {
     const value: string
     export default value
-}
-
-declare interface EventTarget {
-    result: any
-    transaction: IDBTransaction
-}
-
-declare interface IDBDatabase {
-    continue: Function
-    value: any
-}
-
-declare interface HTMLInputElement {
-    oldValue: string
-    value: any
-}
-
-interface Window {
-    HTMLElement: typeof HTMLElement
-    HTMLInputElement: typeof HTMLInputElement
-    HTMLInputElement: typeof HTMLInputElement
-    HTMLSelectElement: typeof HTMLSelectElement
-    HTMLTextAreaElement: typeof HTMLTextAreaElement
-    Object: typeof Object
-
-    G_REPLAY_STR_PACKS: string
-
-    G_REPLAY_PACKS: any
-
-    G_REPLAY_DATA: any
-
-    G_RECORD_OPTIONS: any
-    G_REPLAY_OPTIONS: any
-
-    G_REPLAY_LOCATION: any
-
-    G_RECORD_RELATED_ID: string
-    webkitAudioContext?: typeof AudioContext
-
-    TimeCat: {
-        record: (
-            options: RecordOptions
-        ) => {
-            unsubscribe: () => void
-        }
-        replay(options: { socketUrl: string } = {} as any): Promise<void>
-        exportReplay(exportOptions: ExportOptions): Promise<void>
-    }
-}
-
-interface Event {
-    arguments: any
 }

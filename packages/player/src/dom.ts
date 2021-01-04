@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import {
     RecordData,
     MouseRecordData,
@@ -17,12 +26,15 @@ import {
     LocationRecordData,
     CanvasRecordData,
     UnionToIntersection,
-    SnapshotRecord
+    SnapshotRecord,
+    FontRecordData
 } from '@timecat/share'
 import FIXED_CSS from './fixed.scss'
-import { PlayerComponent } from './player'
+import { PlayerComponent } from './components/player'
 import { nodeStore, isElementNode, isExistingNode, delay, isVNode, revertStrByPatches } from '@timecat/utils'
 import { setAttribute, createSpecialNode, convertVNode } from '@timecat/virtual-dom'
+import { ContainerComponent } from './components/container'
+import { html, parseHtmlStr, Store } from './utils'
 
 /**
  * if return true then revert
@@ -51,6 +63,10 @@ function insertOrMoveNode(data: UpdateNodeData, orderSet: Set<number>) {
             if (!nextNode) {
                 return true
             }
+
+            if (!parentNode.contains(nextNode)) {
+                return true
+            }
         }
         const n = node as VNode | VSNode
 
@@ -76,8 +92,14 @@ function insertOrMoveNode(data: UpdateNodeData, orderSet: Set<number>) {
     }
 }
 
-export async function updateDom(this: PlayerComponent, Record: RecordData) {
+export async function updateDom(this: PlayerComponent, Record: RecordData, opts?: { isJumping: boolean }) {
+    const { isJumping } = opts || {}
+    const delayTime = isJumping ? 0 : 200
     const { type, data } = Record
+
+    // waiting for mouse or scroll transform animation finish
+    const actionDelay = () => (delayTime ? delay(delayTime) : Promise.resolve())
+
     switch (type) {
         case RecordType.SNAPSHOT: {
             const snapshotData = data as SnapshotRecord['data']
@@ -108,7 +130,7 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
             // prevent jump too long distance
             const behavior = Math.abs(top - curTop) > window.G_REPLAY_DATA.snapshot.data.height * 3 ? 'auto' : 'smooth'
 
-            target.scroll({
+            target?.scroll({
                 top,
                 left,
                 behavior
@@ -124,7 +146,7 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
                 ;(target as HTMLElement).style.height = height + 'px'
             } else {
                 target = this.c.sandBoxDoc.body
-                this.c.resize(width, height)
+                this.c.resize({ setWidth: width, setHeight: height })
             }
             break
         }
@@ -219,6 +241,11 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
                     const node = nodeStore.getNode(id) as HTMLElement
 
                     if (node) {
+                        if (node.tagName === 'IFRAME' && key === 'src') {
+                            setAttribute(node as HTMLElement, 'disabled-src', value)
+                            setAttribute(node as HTMLElement, 'src', null)
+                            return
+                        }
                         setAttribute(node as HTMLElement, key, value)
                     }
                 })
@@ -244,7 +271,7 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
             await actionDelay()
             const { id, key, type: formType, value, patches } = data as FormElementRecordData
             const node = nodeStore.getNode(id) as HTMLInputElement | undefined
-            const { mode } = window.G_REPLAY_OPTIONS
+            const { mode } = Store.getState().player.options
 
             if (node) {
                 if (formType === FormElementEvent.INPUT || formType === FormElementEvent.CHANGE) {
@@ -255,12 +282,9 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
                         ;(node as any)[key] = value
                     }
                 } else if (formType === FormElementEvent.FOCUS) {
-                    if (mode === 'live') {
-                        return
-                    }
-                    node.focus && node.focus()
+                    mode !== 'live' && !isJumping && node.focus && node.focus()
                 } else if (formType === FormElementEvent.BLUR) {
-                    node.blur && node.blur()
+                    mode !== 'live' && !isJumping && node.blur && node.blur()
                 } else if (formType === FormElementEvent.PROP) {
                     if (key) {
                         ;(node as any)[key] = value
@@ -282,77 +306,46 @@ export async function updateDom(this: PlayerComponent, Record: RecordData) {
         }
         case RecordType.CANVAS: {
             await actionDelay()
-            const { src, id, strokes } = data as UnionToIntersection<CanvasRecordData>
-            const target = nodeStore.getNode(id) as HTMLCanvasElement
-            if (!target) {
-                return
-            }
-            const ctx = target.getContext('2d')!
-
-            if (src) {
-                const image = new Image()
-                image.src = src
-                image.onload = function (this: HTMLImageElement) {
-                    ctx.drawImage(this, 0, 0)
-                }
-            } else {
-                async function createChain() {
-                    type Strokes = UnionToIntersection<CanvasRecordData>['strokes']
-                    function splitStrokes(strokesArray: Strokes[]) {
-                        const result: Strokes[] = []
-                        strokesArray.forEach(strokes => {
-                            const len = strokes.length
-                            const pivot = Math.floor(len / 2)
-                            result.push(...[strokes.splice(0, pivot), strokes])
-                        })
-                        return result
-                    }
-
-                    // TODO expect stroke smooth (elapsed time)
-                    for (const strokesArray of splitStrokes(splitStrokes([strokes]))) {
-                        // await delay(0) // have problem here
-                        for (const stroke of strokesArray) {
-                            const { name, args } = stroke
-                            if (Array.isArray(args)) {
-                                if (name === 'drawImage') {
-                                    args[0] = nodeStore.getNode(args[0])
-                                }
-                                ;(ctx[name] as Function).apply(ctx, args)
-                            } else {
-                                ;(ctx[name] as Object) = args
-                            }
-                        }
-                    }
-                }
-                createChain()
-            }
+            renderCanvas(data as CanvasRecordData)
+            break
         }
-
+        case RecordType.FONT: {
+            const { family, source } = data as FontRecordData
+            const buffer = new Uint8Array(source.length)
+            for (let i = 0; i < source.length; i++) {
+                const code = source.charCodeAt(i)
+                buffer[i] = code
+            }
+            const font = new window.FontFace(family, buffer)
+            this.c.sandBoxDoc.fonts.add(font)
+            document.fonts.add(font)
+            break
+        }
         default: {
             break
         }
     }
 }
 
-export function showStartMask() {
-    const startPage = document.querySelector('#cat-start-page')! as HTMLElement
+export function showStartMask(c: ContainerComponent) {
+    const startPage = c.container.querySelector('.player-start-page')! as HTMLElement
     startPage.setAttribute('style', '')
 }
 
-function showStartBtn() {
-    const startPage = document.querySelector('#cat-start-page')! as HTMLElement
+function showStartBtn(el: HTMLElement) {
+    const startPage = el.querySelector('.player-start-page')! as HTMLElement
     const btn = startPage.querySelector('.play-btn') as HTMLElement
     btn.classList.add('show')
     return btn
 }
 
-export function removeStartPage() {
-    const startPage = document.querySelector('#cat-start-page') as HTMLElement
+export function removeStartPage(el: HTMLElement) {
+    const startPage = el.querySelector('.player-start-page') as HTMLElement
     startPage?.parentElement?.removeChild(startPage)
 }
 
-export async function waitStart(): Promise<void> {
-    const btn = showStartBtn()
+export async function waitStart(el: HTMLElement): Promise<void> {
+    const btn = showStartBtn(el)
     return new Promise(r => {
         btn.addEventListener('click', async () => {
             btn.classList.remove('show')
@@ -376,8 +369,13 @@ export function injectIframeContent(contentDocument: Document, snapshotData: Sna
     if (content) {
         const head = content.querySelector('head')
         if (head) {
-            const style = document.createElement('style')
-            style.innerHTML = FIXED_CSS
+            const style = parseHtmlStr(
+                html`<div>
+                    <style>
+                        ${FIXED_CSS}
+                    </style>
+                </div>`
+            )[0].firstElementChild!
             head.appendChild(style)
         }
         const documentElement = contentDocument.documentElement
@@ -387,7 +385,45 @@ export function injectIframeContent(contentDocument: Document, snapshotData: Sna
     }
 }
 
-// waiting for mouse or scroll transform animation finish
-async function actionDelay() {
-    return delay(200)
+function renderCanvas(canvasRecordData: CanvasRecordData) {
+    const data = canvasRecordData as UnionToIntersection<CanvasRecordData>
+    const { src, status, id, strokes } = data
+    const canvas = nodeStore.getNode(id) as HTMLCanvasElement
+    if (!canvas || canvas.constructor.name !== 'HTMLCanvasElement') {
+        return
+    }
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+        return
+    }
+
+    if (src) {
+        const image = new Image()
+        image.src = src
+        image.onload = function (this: HTMLImageElement) {
+            ctx.drawImage(this, 0, 0)
+        }
+    } else if (status) {
+        Object.keys(status).forEach(key => {
+            ;(ctx as any)[key] = status[key]
+        })
+    } else {
+        // TODO expect stroke smooth (elapsed time)
+        for (const stroke of strokes) {
+            // await delay(0) // have problem here
+            const { name, args } = stroke
+            if (Array.isArray(args)) {
+                if (name === 'drawImage' || name === 'createPattern') {
+                    args[0] = nodeStore.getNode(args[0])
+                } else if (name === 'putImageData') {
+                    const data = args[0].data
+                    args[0] = new ImageData(new Uint8ClampedArray(data), args[1], args[2])
+                }
+                ;(ctx[name] as Function).apply(ctx, args)
+            } else {
+                ;(ctx[name] as Object) = args
+            }
+        }
+    }
 }

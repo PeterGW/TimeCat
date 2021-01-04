@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import { throttle, isExistingNode } from '@timecat/utils'
 import { WatcherOptions, MouseRecord, RecordType, MouseEventType } from '@timecat/share'
 import { Watcher } from '../watcher'
@@ -145,8 +154,9 @@ export class MouseWatcher extends Watcher<MouseRecord> {
 
             const frameElement = doc?.defaultView?.frameElement as HTMLElement
             if (frameElement && mode === 'default') {
-                position.y += frameElement.offsetTop
-                position.x += frameElement.offsetLeft
+                const rect = frameElement.getBoundingClientRect()
+                position.y += rect.top
+                position.x += rect.left
             }
 
             return position

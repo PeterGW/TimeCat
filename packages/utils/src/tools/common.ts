@@ -1,20 +1,19 @@
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import diff from 'diff'
 import { radix64 } from '../performance/radix64'
-import {
-    VNode,
-    VSNode,
-    SnapshotRecord,
-    RecordData,
-    AudioRecord,
-    AudioStrList,
-    RecorderOptions,
-    RecordType,
-    ReplayData,
-    ReplayPack,
-    ReplayHead
-} from '@timecat/share'
+import { VNode, VSNode, SnapshotRecord, RecordData, RecordType } from '@timecat/share'
 
 export const isDev = process.env.NODE_ENV === 'development'
+
+export const version = '__VERSION__'
 
 function logErrorOverload(e: Error): string
 function logErrorOverload(msg: string): string
@@ -39,13 +38,22 @@ export function getRandomCode(len: 6 | 7 | 8 = 8) {
     return code.toUpperCase()
 }
 
-export function secondToDate(ms: number) {
-    if (ms <= 0) {
-        ms = 0
+export function secondToTime(second: number) {
+    if (second <= 0) {
+        second = 0
     }
-    const [h, m, s] = [Math.floor(ms / 3600), Math.floor((ms / 60) % 60), Math.floor(ms % 60)]
+    const [h, m, s] = [Math.floor(second / 3600), Math.floor((second / 60) % 60), Math.floor(second % 60)]
     const timeStr = [h, m, s].map(i => (i <= 9 ? '0' + i : i)).join(':')
     return timeStr.replace(/^00\:/, '')
+}
+
+export function getDateTime(timestamp: number) {
+    const date = new Date(timestamp)
+    const hours = date.getHours()
+    const minutes = '0' + date.getMinutes()
+    const seconds = '0' + date.getSeconds()
+    const formattedTime = (hours < 10 ? '0' + hours : hours) + ':' + minutes.substr(-2) + ':' + seconds.substr(-2)
+    return formattedTime
 }
 
 export function toTimeStamp(timeStr: string) {
@@ -63,77 +71,6 @@ export function isSnapshot(frame: RecordData) {
     return (frame as SnapshotRecord).type === RecordType.SNAPSHOT && !(frame as SnapshotRecord).data.frameId
 }
 
-export function classifyRecords(records: RecordData[]) {
-    const packs: ReplayPack[] = []
-
-    function isAudioBufferStr(frame: AudioRecord) {
-        return frame.data.type === 'base64'
-    }
-
-    function isSameHEAD(head: ReplayHead, compare: ReplayHead) {
-        return head.href === compare.href // && head.relatedId === compare.relatedId
-    }
-
-    let replayPack: ReplayPack
-    let replayData: ReplayData
-    records.forEach((record, index) => {
-        const next = records[index + 1]
-        switch (record.type) {
-            case RecordType.HEAD:
-                const headData = record.data
-                const lastHEAD = replayPack && replayPack.head
-
-                if (lastHEAD && isSameHEAD(headData, lastHEAD)) {
-                    break
-                }
-
-                replayPack = {
-                    head: headData,
-                    body: []
-                }
-                if (next && !(next.data as SnapshotRecord['data']).frameId) {
-                    if (replayPack) {
-                        packs.push(replayPack)
-                    }
-                }
-                break
-            case RecordType.SNAPSHOT:
-                if (!record.data.frameId) {
-                    replayData = {
-                        snapshot: record as SnapshotRecord,
-                        records: [],
-                        audio: {
-                            src: '',
-                            bufferStrList: [],
-                            subtitles: [],
-                            opts: {} as RecorderOptions
-                        }
-                    }
-                    if (replayData && replayPack) {
-                        replayPack.body.push(replayData)
-                    }
-                } else {
-                    replayData.records.push(record)
-                }
-                break
-            case RecordType.AUDIO:
-                if (isAudioBufferStr(record as AudioRecord)) {
-                    const audioData = record as AudioRecord
-                    replayData.audio.bufferStrList.push(...(audioData.data as AudioStrList).data)
-                } else {
-                    replayData.audio.opts = (record as AudioRecord).data.data as RecorderOptions
-                }
-                break
-
-            default:
-                replayData.records.push(record as RecordData)
-                break
-        }
-    })
-
-    return packs
-}
-
 export async function delay(t = 200): Promise<void> {
     return new Promise(r => {
         setTimeout(() => r(), t)
@@ -141,19 +78,6 @@ export async function delay(t = 200): Promise<void> {
 }
 export function isVNode(n: VNode | VSNode) {
     return !!(n as VNode).tag
-}
-
-export function download(src: Blob | string, name: string) {
-    const tag = document.createElement('a')
-    tag.download = name
-    if (typeof src === 'string') {
-        tag.href = src
-        tag.click()
-    } else {
-        tag.href = URL.createObjectURL(src)
-        tag.click()
-        URL.revokeObjectURL(tag.href)
-    }
 }
 
 export function getStrDiffPatches(oldStr: string, newStr: string) {
@@ -207,4 +131,159 @@ function getPatches(changes: diff.Change[]) {
         value?: string
         len?: number
     }>
+}
+
+export function isNumeric(n: string) {
+    return !isNaN(parseFloat(n)) && isFinite(parseFloat(n))
+}
+
+export function throttle(
+    func: Function,
+    wait: number,
+    options: { leading?: boolean; trailing?: boolean } = { leading: false, trailing: false }
+): any {
+    let context: any
+    let args: any
+    let result: any
+    let timeout: any = null
+    let previous = 0
+
+    const later = function () {
+        previous = options.leading === false ? 0 : Date.now()
+        timeout = null
+        result = func.apply(context, args)
+        if (!timeout) context = args = null
+    }
+    return function (this: any) {
+        const now = Date.now()
+        if (!previous && options.leading === false) previous = now
+        const remaining = wait - (now - previous)
+        context = this
+        args = arguments
+        if (remaining <= 0 || remaining > wait) {
+            if (timeout) {
+                clearTimeout(timeout)
+                timeout = null
+            }
+            previous = now
+            result = func.apply(context, args)
+            if (!timeout) context = args = null
+        } else if (!timeout && options.trailing !== false) {
+            timeout = setTimeout(later, remaining)
+        }
+        return result
+    }
+}
+
+type Procedure = (...args: any[]) => void
+
+type Options = {
+    isImmediate?: boolean
+}
+
+export function debounce<F extends Procedure>(
+    func: F,
+    waitMilliseconds: number,
+    options: Options = {
+        isImmediate: false
+    }
+): (this: ThisParameterType<F>, ...args: Parameters<F>) => void {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+    return function (this: ThisParameterType<F>, ...args: Parameters<F>) {
+        const context = this
+
+        const doLater = function () {
+            timeoutId = undefined
+            if (!options.isImmediate) {
+                func.apply(context, args)
+            }
+        }
+
+        const shouldCallNow = options.isImmediate && timeoutId === undefined
+
+        if (timeoutId !== undefined) {
+            clearTimeout(timeoutId)
+        }
+
+        timeoutId = setTimeout(doLater, waitMilliseconds)
+
+        if (shouldCallNow) {
+            func.apply(context, args)
+        }
+    }
+}
+
+export function createURL(url: string, base?: string) {
+    try {
+        return new URL(url, base)
+    } catch (e) {
+        logError(e)
+    }
+    return { href: url, pathname: url }
+}
+
+export function stateDebounce<T extends string | boolean | number>(
+    stateHandle: (setState: (state: T) => void) => void,
+    delay: ((state: T) => number) | number,
+    initState?: T
+) {
+    let preState = initState
+    let timer = 0
+    return (cb: (state: T) => void) => {
+        stateHandle(delayExec)
+
+        function delayExec(state: T) {
+            if (timer) {
+                clearTimeout(timer)
+            }
+
+            timer = window.setTimeout(
+                () => {
+                    if (preState === state) {
+                        return
+                    }
+                    cb(state)
+                    preState = state
+                    clearTimeout(timer)
+                    timer = 0
+                },
+                typeof delay === 'number' ? delay : delay(state)
+            )
+        }
+    }
+}
+
+export function logAsciiLogo() {
+    /* eslint-disable */
+    return console.log(
+        `%c
+______ _                _____       _   
+|_   _(_)              /  __ \\     | |  
+  | |  _ _ __ ___   ___| /  \\/ __ _| |_ 
+  | | | | '_ \` _ \\ / _ \\ |    / _\` | __|
+  | | | | | | | | |  __/ \\__/\\ (_| | |_ 
+  \\_/ |_|_| |_| |_|\\___|\\____/\\__,_|\\__|
+    `,
+        'color: #1475b2;'
+    )
+}
+
+export function logBadge(opts: { title: string; content: string; titleColor?: string; backgroundColor?: string }) {
+    const { title, content, titleColor, backgroundColor } = opts
+    const tColor = titleColor || '#606060'
+    const bColor = backgroundColor || '#1475b2'
+
+    const args = [
+        '%c '.concat(title, ' %c ').concat(content, ' '),
+        'padding: 1px; border-radius: 3px 0 0 3px; color: #fff; background: '.concat(tColor, ';'),
+        'padding: 1px; border-radius: 0 3px 3px 0; color: #fff; background: '.concat(bColor, ';')
+    ]
+    console.log.apply(void 0, args)
+}
+
+export function logInfo() {
+    logAsciiLogo()
+    logBadge({ title: 'version', content: version })
+    logBadge({ title: 'more info', content: 'github.com/oct16/timecat' })
 }

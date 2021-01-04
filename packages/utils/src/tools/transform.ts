@@ -1,9 +1,18 @@
-import { RecorderOptions } from '@timecat/share'
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
 
-function encodePCM(bufferData: Float32Array, opts: RecorderOptions) {
+import { AudioOptionsData } from '@timecat/share'
+
+function encodePCM(bufferData: Float32Array, opts: AudioOptionsData) {
     const { sampleBits } = opts
     const isLittleEndian = true
-    const length = bufferData.length * (opts.sampleBits / 8)
+    const length = bufferData.length * (sampleBits / 8)
     const data = new DataView(new ArrayBuffer(length))
     let offset = 0
 
@@ -24,7 +33,7 @@ function encodePCM(bufferData: Float32Array, opts: RecorderOptions) {
     return data
 }
 
-export function encodeWAV(data: Float32Array[], opts: RecorderOptions) {
+export function encodeWAV(data: Float32Array[], opts: AudioOptionsData) {
     const PMC = encodePCM(mergeArray(data), opts)
     const arrayBuffer = createWavFile(PMC, opts)
 
@@ -46,7 +55,7 @@ function mergeArray(list: Float32Array[]) {
     return data
 }
 
-function createWavFile(audioData: DataView, { channelCount, sampleBits, sampleRate }: RecorderOptions) {
+function createWavFile(audioData: DataView, { channelCount, sampleBits, sampleRate }: AudioOptionsData) {
     const WAV_HEAD_SIZE = 44
     const buffer = new ArrayBuffer(WAV_HEAD_SIZE + audioData.byteLength)
     const isLittleEndian = true

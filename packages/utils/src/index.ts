@@ -1,13 +1,12 @@
-export * from './store/node'
-export * from './store/idb'
-export * from './redux'
-export * from './tools/common'
-export * from './tools/tool'
-export * from './polyfill/recover-native'
-export * from './tools/dom'
-export * from './tools/scroll'
-export * from './tools/output'
-export * from './tools/transform'
-export * from './tools/transmitter'
-export * from './performance/fmp'
+/**
+ * Copyright (c) oct16.
+ * https://github.com/oct16
+ *
+ * This source code is licensed under the GPL-3.0 license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+export * from './store'
+export * from './tools'
 export * from './performance/radix64'
